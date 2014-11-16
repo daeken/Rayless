@@ -72,7 +72,7 @@ def emit(atom, op_map):
 
 	if atom[0] == 'set':
 		dest, src = atom[1:]
-		print >>insns, setter(op_map[dest], emit(src, op_map)) + ';'
+		print >>insns, '\t' + setter(op_map[dest], emit(src, op_map)) + ';'
 		return dest
 	elif atom[0] in '+-':
 		a, b = atom[1:]
@@ -87,9 +87,9 @@ def insn_func(name, ops):
 def emit_instruction(name, ops, args, body):
 	print >>decl, 'void', insn_func(name, ops) + '();'
 	print >>insns, 'void InstructionDispatcher::' + insn_func(name, ops) + '() {'
+	print >>insns, '\tprintf("%r\\n");' % ((name, ops, args, body), )
 
 	op_map = dict((arg, ops[i]) for i, arg in enumerate(args))
-	print name, ops, args, op_map
 
 	for elem in body:
 		emit(elem, op_map)
@@ -125,6 +125,7 @@ def emit_group(fp, switch, elems, depth):
 		print >>fp, '\t'*depth+'\t%s();' % func
 		print >>fp, '\t'*depth+'\tbreak;'
 	print >>fp, '\t'*depth+'default:'
+	print >>fp, '\t'*depth+'\tprintf("Unknown opcode %%02x\\n", %s);' % switch
 	print >>fp, '\t'*depth+'\tassert(false);'
 	print >>fp, '\t'*depth+'}'
 

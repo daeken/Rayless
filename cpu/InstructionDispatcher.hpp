@@ -1,3 +1,5 @@
+#undef NDEBUG
+#include <cassert>
 #include "llvm/DerivedTypes.h"
 #include "llvm/IRBuilder.h"
 #include "llvm/LLVMContext.h"

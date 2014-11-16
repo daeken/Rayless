@@ -108,5 +108,6 @@ case 0xbf:
 	mov_rDI_Iv();
 	break;
 default:
+	printf("Unknown opcode %02x\n", opcode_1);
 	assert(false);
 }

@@ -6,7 +6,7 @@ InstructionDispatcher::InstructionDispatcher() {
 #define FLAG_MATCH(prefix, flag) case prefix: Flags |= InstructionFlags::flag; break
 void InstructionDispatcher::Dispatch(void *addr) {
 	unsigned char *bytes = (unsigned char *) addr;
-	bool found_prefix = true;
+	bool found_prefix = true, branched = false;
 	Flags = InstructionFlags::None;
 	while(found_prefix) {
 		switch(*(bytes++)) {
@@ -27,6 +27,7 @@ void InstructionDispatcher::Dispatch(void *addr) {
 				break;
 		}
 	}
-	unsigned char opcode_1 = *(bytes++);
+	unsigned char opcode_1 = *bytes;
+	printf("foo %02x\n", opcode_1);
 #include "dispatcher_gen.cpp"
 }
