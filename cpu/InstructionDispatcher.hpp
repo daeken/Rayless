@@ -1,13 +1,24 @@
-#undef NDEBUG
-#include <cassert>
-#include "llvm/DerivedTypes.h"
-#include "llvm/IRBuilder.h"
-#include "llvm/LLVMContext.h"
-#include "llvm/Module.h"
+#pragma once
+
+#include "llvm/Analysis/Passes.h"
+#include "llvm/ExecutionEngine/ExecutionEngine.h"
+#include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/Verifier.h"
+#include "llvm/PassManager.h"
+#include "llvm/Support/TargetSelect.h"
+#include "llvm/Transforms/Scalar.h"
+#include "llvm/ExecutionEngine/JIT.h"
+#include <iostream>
 
 using namespace llvm;
 
-static IRBuilder<> Builder(getGlobalContext());
+extern IRBuilder<> Builder;
+
+#include "Cpu.hpp"
 
 enum InstructionFlags {
 	None   = 0x0000,
@@ -30,12 +41,22 @@ inline InstructionFlags& operator|=(InstructionFlags &a, InstructionFlags b) {
 	return a = static_cast<InstructionFlags>(static_cast<int>(a) | static_cast<int>(b));
 }
 
-class InstructionDispatcher {
+typedef class InstructionDispatcher {
 public:
-	InstructionDispatcher();
-	void Dispatch(void *addr);
+	InstructionDispatcher(class Cpu *cpu, class Function *function);
+	int Dispatch(unsigned int addr);
 
-	InstructionFlags Flags;
+	void CalcModRM();
+	ConstantInt *GetImmediateOp32();
+	ConstantInt *GetImmediateOp8();
+
+	Cpu *cpu;
+	InstructionFlags flags;
+	unsigned char *bytes;
+	unsigned int opcodeSize, modRMSize, immediateSize, curEip;
+	bool branched;
+	Function *function;
+	Value *stateArg;
 
 #include "instruction_decl.hpp"
-};
+} InstructionDispatcher_t;

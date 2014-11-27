@@ -1,5 +1,8 @@
 (cpu
 	(insn mov (dest src) (set dest src))
+
 	(insn add (dest b) (set dest (+ dest b)))
 	(insn sub (dest b) (set dest (- dest b)))
+
+	(insn jmp (dest) (reljmp dest))
 )

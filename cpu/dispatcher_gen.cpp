@@ -107,7 +107,16 @@ case 0xbe:
 case 0xbf:
 	mov_rDI_Iv();
 	break;
+case 0xe9:
+	jmp_Jz();
+	break;
+case 0xea:
+	jmp_Ap();
+	break;
+case 0xeb:
+	jmp_Jb();
+	break;
 default:
 	printf("Unknown opcode %02x\n", opcode_1);
-	assert(false);
+	return -1;
 }

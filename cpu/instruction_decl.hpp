@@ -34,3 +34,6 @@ void mov_rSP_Iv();
 void mov_rBP_Iv();
 void mov_rSI_Iv();
 void mov_rDI_Iv();
+void jmp_Jz();
+void jmp_Ap();
+void jmp_Jb();
