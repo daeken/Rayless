@@ -4,6 +4,8 @@
 #include "CpuState.hpp"
 #include "MMU.hpp"
 
+#define abort(args...) do { printf(args); exit(1); } while(0)
+
 typedef void (*BlockFunction)(CpuState *);
 
 class Cpu {

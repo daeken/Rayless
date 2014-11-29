@@ -8,12 +8,11 @@ public:
 
 	System() {
 		mmu = new MMU();
-		cpu = new Cpu(mmu);
 	}
 
 	void LoadXbe(char *fn) {
 		Xbe xbe(fn);
-		assert(mmu->AllocAt(xbe.header.base, xbe.header.soh));
+		assert(mmu->AllocAt(xbe.header.base, xbe.header.soh) == true);
 		memcpy(mmu->GetPtr(xbe.header.base), xbe.full_header, xbe.header.soh);
 
 		for(int i = 0; i < xbe.header.numsects; ++i) {
@@ -21,6 +20,14 @@ public:
 			assert(mmu->AllocAt(sect->vaddr, sect->vsize));
 			xbe.LoadSection(i, mmu->GetPtr(sect->vaddr));
 		}
+
+		cpu = new Cpu(mmu);
+		cpu->state.eip = xbe.header.oep;
+	}
+
+	void Run() {
+		printf("Running from %08x\n", cpu->state.eip);
+		cpu->Run();
 	}
 };
 
@@ -31,5 +38,6 @@ int main(int argc, char **argv) {
 	}
 	System sys;
 	sys.LoadXbe(argv[1]);
+	sys.Run();
 	return 0;
 }

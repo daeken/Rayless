@@ -5,36 +5,30 @@
 #include <sys/mman.h>
 
 MMU::MMU() {
-	void *temp = malloc(4096);
-	Base = (uint64_t) temp;
-	free(temp);
+	void *temp = mmap(nullptr, 1L << 32, PROT_READ|PROT_WRITE, MAP_ANON|MAP_PRIVATE, -1, 0);
+	base = (uint64_t) temp;
+	printf("MMU base addr 0x%016llx\n", base);
 }
 
 void *MMU::GetPtr(uint32_t ptr) {
-	return (void *) (Base + ptr);
+	return (void *) (base + ptr);
 }
 
 uint32_t MMU::PtrToOffset(void *ptr) {
 	uint64_t temp = (uint64_t) ptr;
-	assert(temp >= Base && (temp - Base) < (1L << 32));
-	return (uint32_t) (temp - Base);
+	assert(temp >= base && (temp - base) < (1L << 32));
+	return (uint32_t) (temp - base);
 }
 
 bool MMU::AllocAt(uint32_t ptr, uint32_t size) {
-	return mmap(
-		GetPtr(ptr), 
-		size, 
-		PROT_READ|PROT_WRITE, 
-		MAP_SHARED|MAP_ANON, 
-		-1, 
-		0
-	) != MAP_FAILED;
+	return true;
 }
 
 uint32_t MMU::Alloc(uint32_t size) {
-	return PtrToOffset(malloc(size));
+	assert(false);
+	return 0;
 }
 
 void MMU::Free(uint32_t ptr) {
-	free(GetPtr(ptr));
+	assert(false);
 }

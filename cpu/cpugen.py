@@ -3,6 +3,7 @@ from opcodes import opcodes
 import re, sys
 from pprint import pprint
 from sets import Set
+from cStringIO import StringIO
 
 import os.path
 
@@ -68,25 +69,48 @@ def parse_instructions():
 
 	return insns
 
-def setter(type, value):
-	if type.endswith('AX'):
-		dest = 'Builder.CreateStructGEP(stateArg, 1)'
+baseregs = 'ip ax cx dx bx sp bp si di flags'.split(' ')
+def reg(name):
+	global notimp
+	if name.startswith('e') and name[1:] in baseregs:
+		return 'Builder.CreateStructGEP(stateArg, %i)' % baseregs.index(name[1:])
 	else:
+		notimp = True
+		return '0'
+
+def setter(type, value):
+	global notimp
+	if type.endswith('AX'):
+		dest = reg('eax')
+	elif type == 'Gv':
+		dest = 'GetReg(OperandSize())'
+	elif type == 'Ev':
+		dest = 'GetRM(OperandSize())'
+	else:
+		notimp = True
 		dest = '0'
 	return 'Builder.CreateStore(%s, %s)' % (value, dest)
 
 def getter(type):
-	if type in ('Iv', 'Iz'):
+	global notimp
+	if type in ('Iv', 'Iz', 'Jz'):
 		return 'GetImmediateOp32()'
+	elif type == 'Ov':
+		return 'Builder.CreateLoad(CreatePointer(GetImmediateOp32(), 32))'
 	elif type in ('Ib', 'Jb'):
 		return 'GetImmediateOp8()'
 	elif type.endswith('AX'):
-		return 'Builder.CreateLoad(Builder.CreateStructGEP(stateArg, 1))'
+		return 'Builder.CreateLoad(%s)' % reg('eax')
+	elif type == 'Gv':
+		return 'Builder.CreateLoad(GetReg(OperandSize()))'
+	elif type == 'Ev':
+		return 'Builder.CreateLoad(GetRM(OperandSize()))'
 	else:
+		notimp = True
 		return '0'
 
 def emit(atom, op_map):
-	global branches
+	global branches, notimp
 	if not isinstance(atom, list):
 		if atom in op_map:
 			return getter(op_map[atom])
@@ -101,6 +125,7 @@ def emit(atom, op_map):
 	elif atom[0] in '+-':
 		a, b = atom[1:]
 		if emit(a, op_map) == '0' or emit(b, op_map) == '0':
+			notimp = True
 			return '0'
 		return 'Builder.Create%s(%s, %s)' % ({'+':'Add', '-':'Sub'}[atom[0]], emit(a, op_map), emit(b, op_map))
 	elif atom[0] == 'neg':
@@ -120,27 +145,38 @@ needs_modrm = 'Gv,Ev,Gb,Eb'.split(',')
 
 global branches
 
+notimp = True
 def emit_instruction(name, ops, args, body):
-	global branches
+	global branches, insns, notimp
 	branches = False
 	print >>decl, 'void', insn_func(name, ops) + '();'
 	print >>insns, 'void InstructionDispatcher::' + insn_func(name, ops) + '() {'
-	print >>insns, '\tprintf("%r\\n");' % ((name, ops, args, body), )
+	print >>insns, '\tprintf("0x%%08x %r\\n", curEip);' % ((name, ops, args, body), )
 
 	if True in [op in needs_modrm for op in ops]:
 		print >>insns, '\tCalcModRM();'
 	for op in ops:
 		if op == 'Ib' or op == 'Jb':
 			print >>insns, '\timmediateSize += 1;'
-		elif op == 'Iv' or op == 'Iz' or op == 'Jz':
+		elif op == 'Iv' or op == 'Iz' or op == 'Jz' or op == 'Ov':
 			print >>insns, '\timmediateSize += ((flags & InstructionFlags::Opsize) == 0) ? 4 : 2;'
 		elif op == 'Iw':
 			print >>insns, '\timmediateSize += 4;'
 
 	op_map = dict((arg, ops[i]) for i, arg in enumerate(args))
 
+	notimp = False
+	oldout = insns
+	insns = StringIO()
 	for elem in body:
 		emit(elem, op_map)
+	buffer = insns.getvalue()
+	insns = oldout
+	if notimp:
+		print >>insns, '\tabort("Not implemented\\n");'
+	else:
+		insns.write(buffer)
+
 	if branches:
 		print >>insns, '\tbranched = true;'
 	print >>insns, '}'
@@ -175,7 +211,7 @@ def emit_group(fp, switch, elems, depth):
 		print >>fp, '\t'*depth+'\t%s();' % func
 		print >>fp, '\t'*depth+'\tbreak;'
 	print >>fp, '\t'*depth+'default:'
-	print >>fp, '\t'*depth+'\tprintf("Unknown opcode %%02x\\n", %s);' % switch
+	print >>fp, '\t'*depth+'\tabort("Unknown opcode %%02x\\n", %s);' % switch
 	print >>fp, '\t'*depth+'\treturn -1;'
 	print >>fp, '\t'*depth+'}'
 

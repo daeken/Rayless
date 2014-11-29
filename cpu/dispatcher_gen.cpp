@@ -117,6 +117,6 @@ case 0xeb:
 	jmp_Jb();
 	break;
 default:
-	printf("Unknown opcode %02x\n", opcode_1);
+	abort("Unknown opcode %02x\n", opcode_1);
 	return -1;
 }

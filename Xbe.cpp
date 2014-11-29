@@ -1,6 +1,8 @@
 #include <cassert>
 #include "Xbe.hpp"
 
+#define XORKEY 0x94859D4B
+
 Xbe::Xbe(char *fn) {
 	fp = fopen(fn, "rb");
 	fread(&header, sizeof(XbeHeader), 1, fp);
@@ -13,8 +15,10 @@ Xbe::Xbe(char *fn) {
 	for(int i = 0; i < header.numsects; ++i) {
 		fseek(fp, (header.secthdrs - header.base) + sizeof(XbeSection) * i, SEEK_SET);
 		fread(&sections[i], sizeof(XbeSection), 1, fp);
-		printf("%s %x\n", &full_header[sections[i].nameaddr - header.base], sections[i].vaddr);
 	}
+
+	header.oep ^= XORKEY;
+	header.thunk ^= XORKEY;
 }
 
 void Xbe::LoadSection(int num, void *addr) {

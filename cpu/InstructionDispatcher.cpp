@@ -15,7 +15,7 @@ InstructionDispatcher::InstructionDispatcher(class Cpu *_cpu, class Function *_f
 int InstructionDispatcher::Dispatch(unsigned int addr) {
 	curEip = addr;
 	bytes = (unsigned char *) cpu->mmu->GetPtr(addr);
-	bool found_prefix = true, branched = false;
+	bool found_prefix = true;
 	opcodeSize = modRMSize = immediateSize = 0;
 	flags = InstructionFlags::None;
 	branched = false;
@@ -81,6 +81,89 @@ ConstantInt *InstructionDispatcher::GetImmediateOp32() {
 
 ConstantInt *InstructionDispatcher::GetImmediateOp8() {
 	return ConstantInt::get(Type::getInt8Ty(Builder.getContext()), *((unsigned char *) &bytes[opcodeSize + modRMSize]));
+}
+
+int InstructionDispatcher::OperandSize() {
+	if((flags & InstructionFlags::Opsize) == 0)
+		return 32;
+	else
+		return 16;
+}
+
+Value *InstructionDispatcher::GetReg(int size) {
+	unsigned char modrm = bytes[opcodeSize];
+	int reg = (modrm >> 3) & 7;
+	printf("GetReg %i\n", reg);
+	switch(size) {
+		case 32:
+			switch(reg) {
+				case 0: return Builder.CreateStructGEP(stateArg, 1);
+				case 1: return Builder.CreateStructGEP(stateArg, 2);
+				case 2: return Builder.CreateStructGEP(stateArg, 3);
+				case 3: return Builder.CreateStructGEP(stateArg, 4);
+				case 4: return Builder.CreateStructGEP(stateArg, 5);
+				case 5: return Builder.CreateStructGEP(stateArg, 6);
+				case 6: return Builder.CreateStructGEP(stateArg, 7);
+				case 7: return Builder.CreateStructGEP(stateArg, 8);
+			}
+		default:
+			abort("Unknown size to GetReg: %i\n", size);
+	}
+	return nullptr;
+}
+
+Value *InstructionDispatcher::GetRM(int size) {
+	unsigned char modrm = bytes[opcodeSize];
+	int mod = modrm >> 6, rm = modrm & 7;
+	printf("GetRM %i %i\n", mod, rm);
+	Value *addr = nullptr;
+	switch(size) {
+		case 32:
+			switch(mod) {
+				case 0:
+					switch(rm) {
+						case 0:
+							addr = Builder.CreateStructGEP(stateArg, 1);
+							break;
+						case 1:
+							addr = Builder.CreateStructGEP(stateArg, 2);
+							break;
+						case 2:
+							addr = Builder.CreateStructGEP(stateArg, 3);
+							break;
+						case 3:
+							addr = Builder.CreateStructGEP(stateArg, 4);
+							break;
+						case 5:
+							addr = ConstantInt::get(Type::getInt32Ty(Builder.getContext()), *((unsigned int *) &bytes[opcodeSize + 1]));
+							break;
+						default:
+							abort("Unknown rm to GetRM(mod=0): %i\n", rm);
+					}
+					break;
+				case 3:
+					switch(rm) {
+						case 1:
+							return Builder.CreateStructGEP(stateArg, 2);
+						default:
+							abort("Unknown rm to GetRM(mod=3): %i\n", rm);
+					}
+					break;
+				default:
+					abort("Unknown mod to GetRM: %i\n", mod);
+			}
+			break;
+		default:
+			abort("Unknown size to GetRM: %i\n", size);
+	}
+	return CreatePointer(addr, 32);
+}
+
+Value *InstructionDispatcher::CreatePointer(Value *addr, int size) {
+	Type *stype = Type::getInt32Ty(Builder.getContext())->getPointerTo();
+	Value *base = ConstantInt::get(Type::getInt64Ty(Builder.getContext()), cpu->mmu->base);
+	Value *upaddr = Builder.CreateIntCast(addr, Type::getInt64Ty(Builder.getContext()), false);
+	return Builder.CreateIntToPtr(Builder.CreateAdd(base, upaddr), stype);
 }
 
 #include "instructions_gen.cpp"

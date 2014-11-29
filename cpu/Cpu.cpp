@@ -7,7 +7,7 @@ Cpu::Cpu(MMU *_mmu) {
 	memset(&state, 0, sizeof(CpuState));
 
 	module = new class Module("Rayless", getGlobalContext());
-	std::vector<Type *> stypes(2, Type::getInt32Ty(module->getContext()));
+	std::vector<Type *> stypes(10, Type::getInt32Ty(module->getContext()));
 	CpuStateType = StructType::create(module->getContext(), stypes, "CpuState");
 	std::string err = "";
 	ee = EngineBuilder(module)
@@ -39,7 +39,6 @@ void Cpu::RunOneBlock() {
 		FunctionType *ft = FunctionType::get(Type::getVoidTy(module->getContext()), args, false);
 		sprintf((char *) name, "block_%08x", state.eip);
 		Function *f = Function::Create(ft, Function::ExternalLinkage, (char *) name, module);
-		module->dump();
 
 		InstructionDispatcher dispatcher(this, f);
 		printf("Dispatching...\n");
@@ -48,16 +47,16 @@ void Cpu::RunOneBlock() {
 			uint32_t len = dispatcher.Dispatch(addr);
 			if(len == -1)
 				break;
-			printf("Total instruction length %i\n", len);
+			printf("Foo %08x Total instruction length %i\n", state.eip, len);
 			addr += len;
 		}
 		printf("Done\n");
 
 		Builder.CreateRetVoid();
 
-		module->dump();
+		f->dump();
 		fpm->run(*f);
-		module->dump();
+		f->dump();
 		void *fptr = ee->getPointerToFunction(f);
 		blockFunctions[state.eip] = fp = (BlockFunction) fptr;
 	} else
@@ -74,5 +73,12 @@ void Cpu::DumpState() {
 	printf("====CPU State====\n");
 	printf("EIP: %08x\n", state.eip);
 	printf("EAX: %08x\n", state.eax);
+	printf("ECX: %08x\n", state.ecx);
+	printf("EDX: %08x\n", state.edx);
+	printf("EBX: %08x\n", state.ebx);
+	printf("ESP: %08x\n", state.esp);
+	printf("EBP: %08x\n", state.ebp);
+	printf("ESI: %08x\n", state.esi);
+	printf("EDI: %08x\n", state.edi);
 	printf("=================\n");
 }

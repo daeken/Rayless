@@ -12,5 +12,5 @@ public:
 	uint32_t Alloc(uint32_t size);
 	void Free(uint32_t ptr);
 
-	uint64_t Base;
+	uint64_t base;
 };

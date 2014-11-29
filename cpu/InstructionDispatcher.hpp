@@ -49,6 +49,10 @@ public:
 	void CalcModRM();
 	ConstantInt *GetImmediateOp32();
 	ConstantInt *GetImmediateOp8();
+	int OperandSize();
+	Value *GetReg(int size);
+	Value *GetRM(int size);
+	Value *CreatePointer(Value *addr, int size);
 
 	Cpu *cpu;
 	InstructionFlags flags;

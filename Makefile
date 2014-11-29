@@ -14,4 +14,4 @@ rayless: build/Cpu.so main.cpp
 	clang++ -o build/rayless -g `/usr/local/bin/llvm-config --cxxflags --ldflags` -lz -lncurses build/Cpu.so main.cpp Xbe.cpp
 
 test: rayless
-	cd build; ./rayless ../test1.xbe
+	#cd build; ./rayless ../test1.xbe
